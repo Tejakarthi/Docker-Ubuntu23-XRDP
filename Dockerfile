@@ -39,34 +39,33 @@ RUN apt-get update && \
     rm -f /run/reboot-required*
 
 # Create a simple health check server
-RUN echo '#!/usr/bin/env python3
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import subprocess
-
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == "/health":
-            # Check if XRDP is running
-            try:
-                subprocess.check_output(["pgrep", "xrdp"])
-                self.send_response(200)
-                self.send_header("Content-type", "text/plain")
-                self.end_headers()
-                self.wfile.write(b"OK")
-            except subprocess.CalledProcessError:
-                self.send_response(503)
-                self.send_header("Content-type", "text/plain")
-                self.end_headers()
-                self.wfile.write(b"XRDP not running")
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-server = HTTPServer(("", 8080), HealthHandler)
+RUN echo '#!/usr/bin/env python3\n\
+from http.server import HTTPServer, BaseHTTPRequestHandler\n\
+import subprocess\n\
+\n\
+class HealthHandler(BaseHTTPRequestHandler):\n\
+    def do_GET(self):\n\
+        if self.path == "/health":\n\
+            try:\n\
+                subprocess.check_output(["pgrep", "xrdp"])\n\
+                self.send_response(200)\n\
+                self.send_header("Content-type", "text/plain")\n\
+                self.end_headers()\n\
+                self.wfile.write(b"OK")\n\
+            except subprocess.CalledProcessError:\n\
+                self.send_response(503)\n\
+                self.send_header("Content-type", "text/plain")\n\
+                self.end_headers()\n\
+                self.wfile.write(b"XRDP not running")\n\
+        else:\n\
+            self.send_response(404)\n\
+            self.end_headers()\n\
+\n\
+server = HTTPServer(("", 8080), HealthHandler)\n\
 server.serve_forever()' > /usr/local/bin/healthcheck.py && \
     chmod +x /usr/local/bin/healthcheck.py
 
-# Rest of the configuration remains the same as before
+# Configure user and environment
 RUN useradd -s /bin/bash -m $USER && \
     if [ ! -z "$PASS_HASH" ]; then \
         usermod -p "$PASS_HASH" $USER; \
@@ -97,15 +96,13 @@ RUN sed -i "s/#EnableConsole=false/EnableConsole=true/g" /etc/xrdp/xrdp.ini && \
     ufw allow 8080/tcp && \
     ufw --force enable
 
-# Configure Polkit for GNOME
-COPY <<EOF /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla
-[Allow Colord all Users]
-Identity=unix-user:*
-Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile
-ResultAny=no
-ResultInactive=no
-ResultActive=yes
-EOF
+# Create Polkit configuration file
+RUN echo '[Allow Colord all Users]\n\
+Identity=unix-user:*\n\
+Action=org.freedesktop.color-manager.create-device;org.freedesktop.color-manager.create-profile;org.freedesktop.color-manager.delete-device;org.freedesktop.color-manager.delete-profile;org.freedesktop.color-manager.modify-device;org.freedesktop.color-manager.modify-profile\n\
+ResultAny=no\n\
+ResultInactive=no\n\
+ResultActive=yes' > /etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla
 
 # X11 forwarding configuration (if enabled)
 RUN if [ "$X11Forwarding" = "true" ]; then \
