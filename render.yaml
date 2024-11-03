@@ -6,13 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - RDP_PORT=${RDP_PORT}
-        - RDP_USER=${RDP_USER}
-        - RDP_PASSWORD=${RDP_PASSWORD}
+        RDP_PORT: ${RDP_PORT}
+        RDP_USER: ${RDP_USER}
+        RDP_PASSWORD: ${RDP_PASSWORD}
     environment:
-      RDP_PORT: ${RDP_PORT}
-      RDP_USER: ${RDP_USER}
-      RDP_PASSWORD: ${RDP_PASSWORD}
+      - RDP_PORT=${RDP_PORT}
+      - RDP_USER=${RDP_USER}
+      - RDP_PASSWORD=${RDP_PASSWORD}
     ports:
       - "${RDP_PORT}:${RDP_PORT}"
     volumes:
