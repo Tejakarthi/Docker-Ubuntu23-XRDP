@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  xrdp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - RDP_PORT=${RDP_PORT}
+        - RDP_USER=${RDP_USER}
+        - RDP_PASSWORD=${RDP_PASSWORD}
+    environment:
+      RDP_PORT: ${RDP_PORT}
+      RDP_USER: ${RDP_USER}
+      RDP_PASSWORD: ${RDP_PASSWORD}
+    ports:
+      - "${RDP_PORT}:${RDP_PORT}"
+    volumes:
+      - xrdp_logs:/var/log/supervisor
+    container_name: xrdp-container
+
+volumes:
+  xrdp_logs:
