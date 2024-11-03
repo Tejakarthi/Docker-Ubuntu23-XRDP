@@ -4,6 +4,16 @@ FROM ubuntu:latest
 # Prevent interactive prompts during installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Define arguments for environment variables that will be passed from the .env file
+ARG RDP_PORT
+ARG RDP_USER
+ARG RDP_PASSWORD
+
+# Set environment variables
+ENV RDP_PORT=${RDP_PORT}
+ENV RDP_USER=${RDP_USER}
+ENV RDP_PASSWORD=${RDP_PASSWORD}
+
 # Install required packages
 RUN apt-get update && apt-get install -y \
     xrdp \
@@ -14,9 +24,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure XRDP to listen on port 3390 instead of the default 3389
+# Configure XRDP to use the specified port and user settings
 RUN adduser xrdp ssl-cert
-RUN sed -i 's/3389/3390/g' /etc/xrdp/xrdp.ini
+RUN sed -i "s/3389/${RDP_PORT}/g" /etc/xrdp/xrdp.ini
 RUN echo "startxfce4" > /etc/skel/.xsession
 
 # Configure Supervisor to manage XRDP services
@@ -32,11 +42,11 @@ RUN echo "[supervisord]" > /etc/supervisor/conf.d/supervisord.conf && \
     echo "stdout_logfile=/var/log/supervisor/xrdp.log" >> /etc/supervisor/conf.d/supervisord.conf && \
     echo "stderr_logfile=/var/log/supervisor/xrdp.err" >> /etc/supervisor/conf.d/supervisord.conf
 
-# Set a password for the root user (change 'password' to your desired password)
-RUN echo 'root:password' | chpasswd
+# Set a password for the specified user
+RUN echo "${RDP_USER}:${RDP_PASSWORD}" | chpasswd
 
-# Expose the RDP port
-EXPOSE 3390
+# Expose the specified RDP port
+EXPOSE ${RDP_PORT}
 
 # Start Supervisor, which will manage xrdp and xrdp-sesman
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
